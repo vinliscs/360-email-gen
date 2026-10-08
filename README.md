@@ -46,10 +46,15 @@ then open <http://localhost:8000>.
    officer's own email column).
 3. **Form links** — one URL per grade × relationship (e.g. 4 grades × 4 relationships = 16
    forms). Bulk paste: `Grade A, Peer, https://forms.gle/…`.
-4. **Generate emails** — per-assessor emails with a plain-text table of officers and links.
-   Edit the subject/body templates, then copy a single email, open it in your mail app, or export:
-   - **Mail-merge CSV** (To / Subject / Body) for GMass, YAMM, etc.
-   - **All emails (.txt)**
+4. **Generate emails** — per-assessor emails with a table of officers and links. Preview the
+   email as **HTML** (a real `<table>`, exactly as recipients will see it) or as **plain text**,
+   then copy a single email (text or HTML), open it in your mail app, or export:
+   - **Mail-merge CSV** (To / Subject / Body / BodyHTML) for GMass, YAMM, etc. Map `Body` for
+     plain-text sending or `BodyHTML` for a proper HTML table in the email.
+   - **All emails (.txt)** (plain text)
+
+   Note: the *Open in mail app* (mailto) button always carries the plain-text version — the
+   mailto protocol cannot include HTML.
 
 An email cell may hold several contacts (`a@x.com; b@x.com`) and `Name <email>` is understood.
 Assessors do not need to be targeted employees — support staff and C-suite raters are fine.
@@ -68,5 +73,5 @@ anywhere.
 | `js/app.js` | State, rendering, event wiring |
 | `js/parse.js` | CSV/TSV + .xlsx reading (built-in zip inflate + XML, no libraries) |
 | `js/model.js` | Column auto-detection, assignment computation, duplicates |
-| `js/email.js` | Templates, table formatter, per-assessor email builder |
+| `js/email.js` | Templates, plain-text + HTML table formatters, per-assessor email builder |
 | `js/export.js` | Clipboard, downloads, mailto, mail-merge CSV |

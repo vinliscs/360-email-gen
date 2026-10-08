@@ -328,6 +328,15 @@ main.wrap { padding-bottom: 40px; }
   line-height: 1.6;
   margin: 0;
 }
+.preview-iframe {
+  width: 100%;
+  min-height: 440px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+}
+.btn.outline.small { padding: 4px 10px; font-size: 12.5px; }
+.btn.outline.small.active { background: var(--indigo-soft); border-color: var(--indigo); color: var(--indigo-dark); }
 
 /* ---------- misc ---------- */
 

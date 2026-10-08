@@ -16,6 +16,7 @@ const state = {
   links: {}, // "grade||rel" -> form URL
   settings: { ...defaultSettings },
   selectedAssessor: null,
+  bodyView: "html", // "html" | "text"
   search: "",
   pasteText: "",
   bulkText: "",
@@ -32,7 +33,7 @@ const PLACEHOLDERS = [
   ["{deadline}", "due date (falls back to “the announced deadline”)"],
   ["{officer_count}", "number of officers to assess"],
   ["{plural}", "“s” when more than one officer"],
-  ["{assignments}", "table of officers + form links (only relevant assessment types)"],
+  ["{assignments}", "table of officers + form links (only relevant assessment types; proper HTML table in the HTML version)"],
   ["{signature}", "sign-off name"],
 ];
 
@@ -142,6 +143,13 @@ async function copyEmail(key) {
   if (!e) return;
   const ok = await copyText(`Subject: ${e.subject}\n\n${e.body}`);
   flash("preview-flash", ok ? "Email copied to clipboard ✓" : "Copy failed — select the text manually.");
+}
+
+async function copyHtml(key) {
+  const e = view.emails.find((x) => x.key === key);
+  if (!e) return;
+  const ok = await copyText(e.bodyHtml);
+  flash("preview-flash", ok ? "HTML copied to clipboard ✓" : "Copy failed.");
 }
 
 /* ================================================================
@@ -405,19 +413,31 @@ function listItemsHtml() {
 function previewHtml() {
   const e = currentEmail();
   if (!e) return "";
+  const body =
+    state.bodyView === "html"
+      ? `<iframe class="preview-iframe" srcdoc="<!DOCTYPE html><html><head><meta charset=&quot;utf-8&quot;></head><body style=&quot;margin:12px;&quot;>${e.bodyHtml.replace(/"/g, "&quot;")}"></iframe>`
+      : `<pre class="body-pre">${esc(e.body)}</pre>`;
   return `
   <section class="card">
     <div class="preview-head">
       <h2 class="card-title">${esc(e.assessorName || e.to || "(unknown)")}</h2>
       <div class="btn-row" style="margin-top:0">
         <span id="preview-flash" class="flash"></span>
-        <button class="btn" data-action="copy-email" data-key="${esc(e.key)}">Copy</button>
+        <button class="btn" data-action="copy-email" data-key="${esc(e.key)}">Copy text</button>
+        <button class="btn" data-action="copy-html" data-key="${esc(e.key)}">Copy HTML</button>
         ${e.to ? `<a class="btn outline" href="${esc(mailtoUrl(e))}">Open in mail app</a>` : ""}
       </div>
     </div>
     <div class="field"><p class="field-label">To</p><p>${esc(e.to || "⚠ no email address on record")}</p></div>
     <div class="field"><p class="field-label">Subject</p><p class="strong">${esc(e.subject)}</p></div>
-    <div class="field"><p class="field-label">Body</p><pre class="body-pre">${esc(e.body)}</pre></div>
+    <div class="field">
+      <p class="field-label">Body <span class="muted">— ${state.bodyView === "html" ? "HTML preview (as recipients will see it)" : "plain text"}</span></p>
+      <div class="btn-row" style="margin-top:0;margin-bottom:8px">
+        <button class="btn outline small ${state.bodyView === "html" ? "active" : ""}" data-action="toggle-body-view" data-view="html">HTML</button>
+        <button class="btn outline small ${state.bodyView === "text" ? "active" : ""}" data-action="toggle-body-view" data-view="text">Plain text</button>
+      </div>
+      ${body}
+    </div>
   </section>`;
 }
 
@@ -450,7 +470,7 @@ function step4Html() {
           <button class="btn outline" data-action="download-csv">⬇ Mail-merge CSV (all emails)</button>
           <button class="btn outline" data-action="download-txt">⬇ All emails (.txt)</button>
         </div>
-        <p class="fine">Use the CSV with a mail-merge add-on (GMass, YAMM…) to send personalised emails from Gmail in bulk — the <code>To</code>, <code>Subject</code> and <code>Body</code> columns are ready to map.</p>
+        <p class="fine">Use the CSV with a mail-merge add-on (GMass, YAMM…) to send personalised emails from Gmail in bulk. Map <code>To</code>, <code>Subject</code> and either <code>Body</code> (plain text) or <code>BodyHTML</code> (real HTML table) depending on your add-on. The “Open in mail app” button carries the plain-text version — mailto cannot include HTML.</p>
       </section>
     </div>
     <div class="stack">
@@ -499,6 +519,8 @@ document.addEventListener("click", (e) => {
     case "apply-bulk": applyBulk(); break;
     case "select-assessor": state.selectedAssessor = el.dataset.key; renderList(); renderPreview(); break;
     case "copy-email": copyEmail(el.dataset.key); break;
+    case "copy-html": copyHtml(el.dataset.key); break;
+    case "toggle-body-view": state.bodyView = el.dataset.view === "text" ? "text" : "html"; renderPreview(); break;
     case "download-csv": {
       const ok = downloadText("360-assessment-mail-merge.csv", toMailMergeCsv(view.emails), "text/csv");
       flash("export-flash", ok ? "Mail-merge CSV downloaded ✓" : "Download blocked — use Copy instead.");

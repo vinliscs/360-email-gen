@@ -30,16 +30,26 @@ Aisha Rahman,aisha.rahman@org.com,Grade C,James Lim,james.lim@org.com,Grace Lee,
 
 const fill = (tpl, vars) => tpl.replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? `{${k}}`);
 
+const htmlEscape = (s = "") =>
+  String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+// Inline styles so the table survives Gmail / Outlook sanitising
+const TH_STYLE = 'style="padding:8px 14px;border:1px solid #d1d5db;background:#f3f4f6;text-align:left;font-family:Arial,sans-serif;font-size:14px;color:#1f2937;"';
+const TD_STYLE = 'style="padding:8px 14px;border:1px solid #d1d5db;font-family:Arial,sans-serif;font-size:14px;color:#1f2937;"';
+
 const linkOrMissing = (a, links) => {
   const url = (links[`${a.grade}||${a.relationship}`] ?? "").trim();
   return url || `[FORM LINK MISSING — ${a.grade} / ${a.relationship}]`;
 };
 
+const displayName = (a) =>
+  `${a.officerName}${a.grade && a.grade !== "(no grade)" ? ` (${a.grade})` : ""}`;
+
 // Plain-text table, one row per assignment — only assessment types that apply
 export function formatAssignments(list, links) {
   const rows = list.map((a) => ({
     type: `${a.relationship} assessment`,
-    name: `${a.officerName}${a.grade && a.grade !== "(no grade)" ? ` (${a.grade})` : ""}`,
+    name: displayName(a),
     link: linkOrMissing(a, links),
   }));
   const pad = (s, w) => s + " ".repeat(Math.max(0, w - s.length));
@@ -51,6 +61,32 @@ export function formatAssignments(list, links) {
     `| ${"-".repeat(wType)} | ${"-".repeat(wName)} | ${"-".repeat(4)}`,
     ...rows.map(line),
   ].join("\n");
+}
+
+// Real HTML <table> version for the BodyHTML column
+export function formatAssignmentsHtml(list, links) {
+  const head = `<tr><th ${TH_STYLE}>Assessment type</th><th ${TH_STYLE}>Targeted Name</th><th ${TH_STYLE}>Link</th></tr>`;
+  const body = list
+    .map((a) => {
+      const url = (links[`${a.grade}||${a.relationship}`] ?? "").trim();
+      const linkCell = url
+        ? `<a href="${htmlEscape(url)}" style="color:#4f46e5;">Open form</a>`
+        : `<span style="color:#b91c1c;font-weight:bold;">FORM LINK MISSING — ${htmlEscape(a.grade)} / ${htmlEscape(a.relationship)}</span>`;
+      return `<tr><td ${TD_STYLE}>${htmlEscape(`${a.relationship} assessment`)}</td><td ${TD_STYLE}>${htmlEscape(displayName(a))}</td><td ${TD_STYLE}>${linkCell}</td></tr>`;
+    })
+    .join("");
+  return `<table style="border-collapse:collapse;margin:8px 0;">${head}${body}</table>`;
+}
+
+const TABLE_MARKER = "\u0000TABLE\u0000";
+
+// Turns the plain-text template into an HTML email body:
+// blank-line-separated paragraphs become <p>, the assignments marker becomes the table
+export function htmlBody(text, assignments, links) {
+  const paras = text.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
+  return paras
+    .map((p) => (p === TABLE_MARKER ? formatAssignmentsHtml(assignments, links) : `<p style="margin:0 0 12px;font-family:Arial,sans-serif;font-size:14px;color:#1f2937;">${htmlEscape(p).replace(/\n/g, "<br />")}</p>`))
+    .join("\n");
 }
 
 export function buildEmails(assignments, links, settings) {
@@ -82,6 +118,7 @@ export function buildEmails(assignments, links, settings) {
     };
     e.subject = fill(settings.subject, vars);
     e.body = fill(settings.body, vars);
+    e.bodyHtml = htmlBody(fill(settings.body, { ...vars, assignments: TABLE_MARKER }), e.assignments, links);
   }
   return emails.sort((a, b) => (a.assessorName || a.to).localeCompare(b.assessorName || b.to));
 }

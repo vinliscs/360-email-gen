@@ -42,9 +42,9 @@ export function downloadText(name, content, mime = "text/plain") {
 
 export const csvEscape = (v) => (/[",\n\r]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
 
-// Columns: To, Subject, Body — ready for GMass / YAMM / any mail merge
+// Columns: To, Subject, Body (plain text), BodyHTML (real HTML table) — ready for GMass / YAMM / any mail merge
 export function toMailMergeCsv(emails) {
-  const rows = [["To", "Subject", "Body"], ...emails.map((e) => [e.to, e.subject, e.body])];
+  const rows = [["To", "Subject", "Body", "BodyHTML"], ...emails.map((e) => [e.to, e.subject, e.body, e.bodyHtml])];
   return "\uFEFF" + rows.map((r) => r.map(csvEscape).join(",")).join("\r\n");
 }
 
