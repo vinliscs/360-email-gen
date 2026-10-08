@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>360° Assessment Email Generator</title>
+  <meta name="description" content="Turn a roster of targeted officers and their assessors into ready-to-send emails with the right Google Form link per grade and relationship." />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap header-row">
+      <div>
+        <h1>360° Assessment Email Generator</h1>
+        <p class="subtitle">One row per targeted officer. Generate one email per assessor, with the right Google&nbsp;Form link per grade &amp; relationship.</p>
+      </div>
+      <div id="stats" class="stats"></div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <nav id="stepper" class="stepper" aria-label="Steps"></nav>
+    <div id="error-box"></div>
+    <div id="step"></div>
+    <div id="step-nav" class="step-nav"></div>
+    <p class="privacy">Everything runs locally in your browser. No roster data or form links are uploaded anywhere.</p>
+  </main>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
