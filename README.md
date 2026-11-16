@@ -72,6 +72,7 @@ anywhere.
 | `styles.css` | All styling |
 | `js/app.js` | State, rendering, event wiring |
 | `js/parse.js` | CSV/TSV + .xlsx reading (built-in zip inflate + XML, no libraries) |
+| `js/forms_sheet.js` | Import form links from a Google Sheet (grade × self/peer/subordinate/supervisor form URLs) |
 | `js/model.js` | Column auto-detection, assignment computation, duplicates |
 | `js/email.js` | Templates, plain-text + HTML table formatters, per-assessor email builder |
 | `js/export.js` | Clipboard, downloads, mailto, mail-merge CSV |

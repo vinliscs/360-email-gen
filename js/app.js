@@ -3,6 +3,7 @@
 import { REL_ORDER, linkKey, relSort, autoDetectMapping, computeAssignments } from "./model.js";
 import { defaultSettings, buildEmails, SAMPLE_CSV } from "./email.js";
 import { parseFile, parseDelimited } from "./parse.js";
+import { parseFormsSheet } from "./forms_sheet.js";
 import { copyText, downloadText, toMailMergeCsv, toAllText, mailtoUrl } from "./export.js";
 
 /* ================================================================
@@ -20,6 +21,8 @@ const state = {
   search: "",
   pasteText: "",
   bulkText: "",
+  formsPaste: "",
+  formsReport: "",
   error: "",
 };
 
@@ -111,38 +114,11 @@ function usePaste() {
 }
 
 async function handleFiles(files) {
-<<<<<<< HEAD
   if (!files || !files.length) return;
   try {
     adoptParsed(await parseFile(files[0]), files[0].name);
   } catch (err) {
     state.error = err && err.message ? err.message : "Could not read that file.";
-=======
-  if (!files.length) return;
-  const file = files[0];
-
-  try {
-    let parsed;
-    if (/\.xlsx$/i.test(file.name)) {
-      parsed = await parseXlsx(await file.arrayBuffer());
-    } else if (file.name.endsWith('.csv') || file.name.endsWith('.tsv')) {
-      parsed = parseDelimited(await file.text());
-    } else if (file.type === 'text/csv') {
-      parsed = parseDelimited(await file.text());
-    } else if (file.name.includes('Google Sheet')) {
-      // Handle Google Sheets URL
-      const url = prompt("Please enter the Google Sheet URL:");
-      if (!url) return;
-      parsed = await parseGoogleSheets(url);
-    } else {
-      throw new Error("Unsupported file type. Please upload a CSV, TSV, or XLSX file.");
-    }
-
-    if (!parsed.headers.length) throw new Error("No data found in the file.");
-    adoptParsed(parsed);
-  } catch (err) {
-    state.error = err.message;
->>>>>>> 3a01123 (added function to accept respondent form URL.)
     render();
   }
 }
@@ -163,6 +139,48 @@ function applyBulk() {
   state.bulkText = "";
   render();
   flash("bulk-flash", applied ? `${applied} link(s) applied ✓` : "");
+}
+
+function importFormsParsed(p, source) {
+  const res = parseFormsSheet(p);
+  if (!res.applied) {
+    state.error = res.errors.length
+      ? `No usable form links in ${source}: ${res.errors[0]}`
+      : `No form links found in ${source} — expected headers: grade, self_form, peer_form, subordinate_form, supervisor_form.`;
+    render();
+    return;
+  }
+  Object.assign(state.links, res.links);
+  state.error = "";
+  state.formsReport =
+    `${res.applied} link(s) imported from ${source} — grades: ${res.gradesSeen.join(", ") || "—"}` +
+    (res.skipped.length
+      ? ` · ${res.skipped.length} cell(s) skipped: ` +
+        res.skipped.map((s) => `row ${s.row} ${s.rel} "${s.value || s.reason}"`).join("; ")
+      : "");
+  render();
+  flash("forms-flash", `${res.applied} link(s) imported ✓`);
+}
+
+function importFormsText(text) {
+  if (!text.trim()) return;
+  const p = parseDelimited(text);
+  if (!p.headers.length) {
+    state.error = "Could not detect any rows in the pasted text.";
+    render();
+    return;
+  }
+  importFormsParsed(p, "pasted cells");
+}
+
+async function handleFormsFile(files) {
+  if (!files || !files.length) return;
+  try {
+    importFormsParsed(await parseFile(files[0]), files[0].name);
+  } catch (err) {
+    state.error = err && err.message ? err.message : "Could not read that file.";
+    render();
+  }
 }
 
 async function copyEmail(key) {
@@ -409,11 +427,30 @@ function step3Html() {
   </section>
 
   <section class="card">
+    <h2 class="card-title">Import links from a Google Sheet</h2>
+    <p class="card-sub">Export the sheet as <b>.xlsx / .csv</b> (File → Download) or paste the cells directly. Expected headers: <code>grade, self_form, peer_form, subordinate_form, supervisor_form</code> — one row per grade, each form column holds that grade's form URL. Imported links fill the grid above automatically.</p>
+    <div class="dropzone" data-dropzone data-forms-dropzone data-action="trigger-forms-file">
+      <p class="dz-main">Drag &amp; drop the exported sheet here, or click to browse</p>
+      <p class="dz-sub">.xlsx · .csv · .tsv · .txt</p>
+      <input type="file" id="forms-file-input" accept=".xlsx,.csv,.tsv,.txt" hidden />
+    </div>
+    <hr class="rule" />
+    <label class="lbl">…or paste the sheet cells directly (tab-separated)</label>
+    <textarea class="ta" rows="4" data-role="forms-paste" placeholder="grade	self_form	peer_form	subordinate_form	supervisor_form">${esc(state.formsPaste)}</textarea>
+    <div class="btn-row">
+      <button class="btn" data-action="import-forms-paste" ${state.formsPaste.trim() ? "" : "disabled"}>Import links from pasted cells</button>
+      <span id="forms-flash" class="flash"></span>
+    </div>
+    ${state.formsReport ? `<p class="fine">${esc(state.formsReport)}</p>` : ""}
+  </section>
+
+  <section class="card">
     <h2 class="card-title">Bulk paste (optional)</h2>
     <p class="card-sub">One row per link, e.g. <code>Grade A, Peer, https://forms.gle/abc123</code></p>
     <textarea class="ta mono" rows="4" data-role="bulk" placeholder="Grade A, Self, https://forms.gle/…">${esc(state.bulkText)}</textarea>
     <div class="btn-row"><button class="btn" data-action="apply-bulk" ${state.bulkText.trim() ? "" : "disabled"}>Apply links</button><span id="bulk-flash" class="flash"></span></div>
   </section>`;
+
 }
 
 /* ================================================================
@@ -530,7 +567,7 @@ function renderPreview() {
 ================================================================ */
 
 document.addEventListener("click", (e) => {
-  if (e.target.id === "file-input") return; // don't re-trigger the file dialog
+  if (e.target.id === "file-input" || e.target.id === "forms-file-input") return; // don't re-trigger the file dialog
   const el = e.target.closest("[data-action]");
   if (!el) return;
   switch (el.dataset.action) {
@@ -544,6 +581,8 @@ document.addEventListener("click", (e) => {
     case "add-pair": state.mapping.widePairs.push({ nameColumn: "", emailColumn: "", relationship: "" }); render(); break;
     case "remove-pair": state.mapping.widePairs.splice(Number(el.dataset.index), 1); render(); break;
     case "apply-bulk": applyBulk(); break;
+    case "trigger-forms-file": $("#forms-file-input").click(); break;
+    case "import-forms-paste": importFormsText(state.formsPaste); break;
     case "select-assessor": state.selectedAssessor = el.dataset.key; renderList(); renderPreview(); break;
     case "copy-email": copyEmail(el.dataset.key); break;
     case "copy-html": copyHtml(el.dataset.key); break;
@@ -564,6 +603,7 @@ document.addEventListener("click", (e) => {
 document.addEventListener("change", (e) => {
   const el = e.target;
   if (el.id === "file-input") { handleFiles(el.files); return; }
+  if (el.id === "forms-file-input") { handleFormsFile(el.files); return; }
   const role = el.dataset.role;
   if (!role) return;
   const i = Number(el.dataset.index);
@@ -581,6 +621,7 @@ document.addEventListener("input", (e) => {
   if (!role) return;
   if (role === "paste") state.pasteText = el.value;
   else if (role === "bulk") state.bulkText = el.value;
+  else if (role === "forms-paste") state.formsPaste = el.value;
   else if (role === "pair-rel") state.mapping.widePairs[Number(el.dataset.index)].relationship = el.value;
   else if (role === "link") {
     state.links[linkKey(el.dataset.grade, el.dataset.rel)] = el.value;
@@ -615,7 +656,8 @@ document.addEventListener("drop", (e) => {
   if (!dz) return;
   e.preventDefault();
   dz.classList.remove("dragover");
-  handleFiles(e.dataTransfer.files);
+  if (dz.hasAttribute("data-forms-dropzone")) handleFormsFile(e.dataTransfer.files);
+  else handleFiles(e.dataTransfer.files);
 });
 
 render();
