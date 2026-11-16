@@ -108,23 +108,3 @@ export function computeAssignments(parsed, mapping) {
   }
   return { assignments, duplicates };
 }
-<<<<<<< HEAD
-=======
-
-export function parseFormUrlsToLinks(formUrlsCsvText) {
-  const { headers, rows } = parseDelimited(formUrlsCsvText);
-
-  const links = {};
-  for (const row of rows) {
-    const grade = (row.grade || "").trim();
-    if (!grade) continue;
-
-    if (row.self_form) links[`${grade}||Self`] = row.self_form.trim();
-    if (row.peer_form) links[`${grade}||Peer`] = row.peer_form.trim();
-    if (row.subordinate_form) links[`${grade}||Subordinate`] = row.subordinate_form.trim();
-    if (row.supervisor_form) links[`${grade}||Supervisor`] = row.supervisor_form.trim();
-  }
-
-  return links;
-}
->>>>>>> 3a01123 (added function to accept respondent form URL.)

@@ -111,38 +111,11 @@ function usePaste() {
 }
 
 async function handleFiles(files) {
-<<<<<<< HEAD
   if (!files || !files.length) return;
   try {
     adoptParsed(await parseFile(files[0]), files[0].name);
   } catch (err) {
     state.error = err && err.message ? err.message : "Could not read that file.";
-=======
-  if (!files.length) return;
-  const file = files[0];
-
-  try {
-    let parsed;
-    if (/\.xlsx$/i.test(file.name)) {
-      parsed = await parseXlsx(await file.arrayBuffer());
-    } else if (file.name.endsWith('.csv') || file.name.endsWith('.tsv')) {
-      parsed = parseDelimited(await file.text());
-    } else if (file.type === 'text/csv') {
-      parsed = parseDelimited(await file.text());
-    } else if (file.name.includes('Google Sheet')) {
-      // Handle Google Sheets URL
-      const url = prompt("Please enter the Google Sheet URL:");
-      if (!url) return;
-      parsed = await parseGoogleSheets(url);
-    } else {
-      throw new Error("Unsupported file type. Please upload a CSV, TSV, or XLSX file.");
-    }
-
-    if (!parsed.headers.length) throw new Error("No data found in the file.");
-    adoptParsed(parsed);
-  } catch (err) {
-    state.error = err.message;
->>>>>>> 3a01123 (added function to accept respondent form URL.)
     render();
   }
 }

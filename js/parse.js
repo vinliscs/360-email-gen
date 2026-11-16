@@ -152,22 +152,3 @@ export async function parseFile(file) {
   if (!p.headers.length) throw new Error("No data rows found in the file.");
   return p;
 }
-<<<<<<< HEAD
-=======
-
-// ---------- google form url ----------
-
-export async function parseGoogleSheets(url) {
-  // Extract the Google Sheet ID from the URL
-  const sheetId = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/)[1];
-  if (!sheetId) throw new Error("Invalid Google Sheet URL");
-
-  // Fetch the Google Sheet data as CSV
-  const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv`;
-  const response = await fetch(csvUrl);
-  if (!response.ok) throw new Error("Failed to fetch Google Sheet data");
-
-  const csvText = await response.text();
-  return parseDelimited(csvText);
-}
->>>>>>> 3a01123 (added function to accept respondent form URL.)
